@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ post.title }}</title>
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="https://api.dreampartners.online/icons/post/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://api.dreampartners.online/icons/post/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://api.dreampartners.online/icons/post/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://api.dreampartners.online/icons/post/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://api.dreampartners.online/icons/post/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="https://api.dreampartners.online/icons/post/android-chrome-512x512.png">
+    <!-- Highlight.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/php.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+    <style>
+        body { 
+            font-family: Georgia, serif; 
+            line-height: 1.6; 
+            color: #333; 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+        }
+        .container { 
+            width: 100%; 
+            max-width: 700px; 
+            padding: 20px; 
+            box-sizing: border-box; 
+            background: #fff;
+            min-height: 100vh;
+        }
+        h1 { 
+            font-size: 40px; 
+            margin-bottom: 5px; 
+            line-height: 1.1; 
+        }
+        .meta { 
+            color: #888; 
+            margin-bottom: 30px; 
+            font-family: -apple-system, sans-serif; 
+        }
+        .content { 
+            font-size: 20px; 
+            word-wrap: break-word; 
+        }
+        .content img { 
+            max-width: 100%; 
+            height: auto; 
+            display: block; 
+            margin: 20px auto; 
+            border-radius: 4px;
+        }
+        .content video {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+            border-radius: 4px;
+        }
+        
+        /* Code styles - inline code как в ChatGPT */
+        .content code {
+            background: rgba(0, 0, 0, 0.06);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e83e8c;
+            word-break: break-word;
+            font-weight: 500;
+        }
+        .inline-code-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 0 2px;
+        }
+        .copy-button-inline {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 3px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            z-index: 10;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+        .copy-button-inline:hover {
+            background: #f9f9f9;
+            border-color: #ddd;
+        }
+        .copy-button-inline.copied {
+            color: #10b981 !important;
+            border-color: #10b981 !important;
+            background: #f0fdf4 !important;
+        }
+        /* Если code внутри pre - это блок кода, убираем стили inline */
+        .content pre {
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre;
+            word-wrap: normal;
+        }
+        .content pre code {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            color: #333;
+            font-size: inherit;
+            word-break: normal;
+        }
+        .content pre {
+            position: relative;
+        }
+        /* Убираем псевдоэлемент ::before, так как используем реальную кнопку */
+        .content pre:hover::before {
+            display: none;
+        }
+        .content pre:hover {
+            cursor: default;
+        }
+        
+        /* Респонсивный видео плеер */
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .action-links {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+        }
+        .edit-link, .delete-link { 
+            color: #1e88e5; 
+            text-decoration: none; 
+            font-family: sans-serif; 
+            border: 1px solid #1e88e5; 
+            padding: 4px 12px; 
+            border-radius: 15px; 
+            background: #fff; 
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .edit-link:hover {
+            background: #1e88e5;
+            color: #fff;
+        }
+        .delete-link {
+            color: #e53935;
+            border-color: #e53935;
+        }
+        .delete-link:hover {
+            background: #e53935;
+            color: #fff;
+        }
+        
+        @media (max-width: 600px) {
+            h1 { font-size: 30px; }
+            .content { font-size: 18px; }
+            .container { padding: 15px; }
+            .action-links {
+                top: 10px;
+                right: 10px;
+                gap: 6px;
+            }
+            .edit-link, .delete-link {
+                padding: 3px 10px;
+                font-size: 12px;
+            }
+        }
+    </style>
+    <script>
+        function deletePost(slug) {
+            if (!confirm('Вы уверены, что хотите удалить этот пост? Это действие нельзя отменить.')) {
+                return;
+            }
+            
+            fetch('/delete/' + slug, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => {
+                alert('Ошибка удаления: ' + error.message);
+            });
+        }
+    </script>
+    <script>
+        // Подсветка синтаксиса для блоков кода и кнопки копирования
+        document.addEventListener('DOMContentLoaded', function() {
+            // Обработка блоков кода (pre > code)
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+                
+                // Добавляем кнопку копирования для блоков
+                const pre = block.parentElement;
+                if (pre && pre.tagName === 'PRE') {
+                    // Проверяем, не добавлена ли уже кнопка
+                    if (pre.querySelector('.copy-code-btn')) return;
+                    
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-code-btn';
+                    copyBtn.textContent = 'Копировать';
+                    copyBtn.style.cssText = 'position: absolute; top: 8px; right: 8px; background: rgba(0, 0, 0, 0.7); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; font-family: sans-serif; opacity: 0; transition: opacity 0.2s; z-index: 10; pointer-events: auto;';
+                    copyBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const text = block.textContent || block.innerText;
+                        navigator.clipboard.writeText(text).then(() => {
+                            copyBtn.textContent = 'Скопировано!';
+                            setTimeout(() => {
+                                copyBtn.textContent = 'Копировать';
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy:', err);
+                            alert('Не удалось скопировать код');
+                        });
+                    };
+                    pre.style.position = 'relative';
+                    pre.appendChild(copyBtn);
+                    pre.onmouseenter = () => copyBtn.style.opacity = '1';
+                    pre.onmouseleave = () => {
+                        if (copyBtn.textContent !== 'Скопировано!') {
+                            copyBtn.style.opacity = '0';
+                        }
+                    };
+                }
+            });
+            
+            // Обработка pre.ql-syntax и pre без code внутри
+            document.querySelectorAll('pre').forEach((pre) => {
+                // Пропускаем, если уже обработан (есть code внутри и кнопка)
+                if (pre.querySelector('code') && pre.querySelector('.copy-code-btn')) return;
+                // Пропускаем, если уже есть кнопка
+                if (pre.querySelector('.copy-code-btn')) return;
+                
+                // Подсвечиваем синтаксис
+                const codeElement = pre.querySelector('code');
+                if (codeElement) {
+                    hljs.highlightElement(codeElement);
+                } else {
+                    // Если нет code, пытаемся определить язык по классу
+                    const langClass = Array.from(pre.classList).find(cls => cls.startsWith('language-'));
+                    if (langClass) {
+                        const lang = langClass.replace('language-', '');
+                        try {
+                            // Декодируем HTML entities перед подсветкой
+                            const text = pre.textContent || pre.innerText;
+                            const highlighted = hljs.highlight(text, { language: lang }).value;
+                            // Создаем code элемент для подсветки
+                            const code = document.createElement('code');
+                            code.className = `language-${lang}`;
+                            code.innerHTML = highlighted;
+                            pre.innerHTML = '';
+                            pre.appendChild(code);
+                        } catch (e) {
+                            // Если язык не поддерживается, просто оставляем как есть
+                        }
+                    } else if (pre.classList.contains('ql-syntax')) {
+                        // Для ql-syntax определяем язык как html
+                        try {
+                            const text = pre.textContent || pre.innerText;
+                            const highlighted = hljs.highlight(text, { language: 'html' }).value;
+                            const code = document.createElement('code');
+                            code.className = 'language-html';
+                            code.innerHTML = highlighted;
+                            pre.innerHTML = '';
+                            pre.appendChild(code);
+                        } catch (e) {
+                            console.error('Highlight error:', e);
+                        }
+                    }
+                }
+                
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-code-btn';
+                copyBtn.textContent = 'Копировать';
+                copyBtn.style.cssText = 'position: absolute; top: 8px; right: 8px; background: rgba(0, 0, 0, 0.7); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; font-family: sans-serif; opacity: 0; transition: opacity 0.2s; z-index: 10; pointer-events: auto;';
+                copyBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    // Получаем текст из code или из самого pre, декодируя HTML entities
+                    const codeEl = pre.querySelector('code');
+                    const text = codeEl ? (codeEl.textContent || codeEl.innerText) : (pre.textContent || pre.innerText);
+                    navigator.clipboard.writeText(text).then(() => {
+                        copyBtn.textContent = 'Скопировано!';
+                        setTimeout(() => {
+                            copyBtn.textContent = 'Копировать';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
+                        alert('Не удалось скопировать код');
+                    });
+                };
+                pre.style.position = 'relative';
+                pre.appendChild(copyBtn);
+                pre.onmouseenter = () => copyBtn.style.opacity = '1';
+                pre.onmouseleave = () => {
+                    if (copyBtn.textContent !== 'Скопировано!') {
+                        copyBtn.style.opacity = '0';
+                    }
+                };
+            });
+            
+            // Обработка inline code (code без pre) - как в gpt/web
+            document.querySelectorAll('.content code:not(pre code)').forEach((codeElement) => {
+                // Пропускаем, если уже обработан
+                if (codeElement.closest('.inline-code-wrapper')) return;
+                
+                // Создаем обертку для inline code с кнопкой копирования
+                const wrapper = document.createElement('span');
+                wrapper.className = 'inline-code-wrapper';
+                wrapper.style.cssText = 'position: relative; display: inline-block; margin: 0 2px;';
+                
+                // Кнопка копирования для inline code (как в gpt/web)
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-button-inline';
+                copyBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+                copyBtn.title = 'Копировать';
+                copyBtn.style.cssText = 'position: absolute; top: -6px; right: -6px; background: white; border: 1px solid #eee; border-radius: 4px; padding: 3px; width: 20px; height: 20px; cursor: pointer; opacity: 0; transition: all 0.2s; z-index: 10; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; color: #666;';
+                copyBtn.onmouseenter = function() {
+                    this.style.background = '#f9f9f9';
+                    this.style.borderColor = '#ddd';
+                };
+                copyBtn.onmouseleave = function() {
+                    if (!this.classList.contains('copied')) {
+                        this.style.background = 'white';
+                        this.style.borderColor = '#eee';
+                    }
+                };
+                copyBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const text = codeElement.textContent;
+                    navigator.clipboard.writeText(text).then(() => {
+                        copyBtn.classList.add('copied');
+                        copyBtn.style.color = '#10b981';
+                        copyBtn.style.borderColor = '#10b981';
+                        setTimeout(() => {
+                            copyBtn.classList.remove('copied');
+                            copyBtn.style.color = '#666';
+                            copyBtn.style.borderColor = '#eee';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
+                    });
+                };
+                
+                // Обертываем code элемент
+                codeElement.parentNode.insertBefore(wrapper, codeElement);
+                wrapper.appendChild(codeElement);
+                wrapper.appendChild(copyBtn);
+                
+                // Показываем кнопку при наведении на wrapper или code
+                const showButton = () => copyBtn.style.opacity = '1';
+                const hideButton = () => {
+                    if (!copyBtn.classList.contains('copied')) {
+                        copyBtn.style.opacity = '0';
+                    }
+                };
+                wrapper.onmouseenter = showButton;
+                wrapper.onmouseleave = hideButton;
+                codeElement.onmouseenter = showButton;
+                codeElement.onmouseleave = hideButton;
+            });
+        });
+    </script>
+</head>
+<body>
+    {% if can_edit %}
+        <div class="action-links">
+            <a href="/edit/{{ post.slug }}" class="edit-link">Edit</a>
+            <a href="#" class="delete-link" onclick="deletePost('{{ post.slug }}'); return false;">Delete</a>
+        </div>
+    {% endif %}
+
+    <div class="container">
+        <h1>{{ post.title }}</h1>
+        <div class="meta">
+            {{ post.author_name or 'Anonymous' }} — {{ post.created_at.strftime('%b %d, %Y') }}
+        </div>
+        <div class="content">
+            {{ post.content|safe }}
+        </div>
+    </div>
+</body>
+</html>
+

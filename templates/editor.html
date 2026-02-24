@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dream Post</title>
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="https://api.dreampartners.online/icons/post/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://api.dreampartners.online/icons/post/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://api.dreampartners.online/icons/post/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://api.dreampartners.online/icons/post/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://api.dreampartners.online/icons/post/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="https://api.dreampartners.online/icons/post/android-chrome-512x512.png">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.bubble.css" rel="stylesheet">
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Georgia, serif; 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            justify-content: center; 
+        }
+        .container { 
+            width: 100%; 
+            max-width: 800px; 
+            padding: 20px; 
+            box-sizing: border-box; 
+            background: #fff;
+            min-height: 100vh;
+        }
+        
+        .header-input { 
+            border: none; 
+            outline: none; 
+            width: 100%; 
+            font-size: 32px; 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+            font-family: inherit; 
+        }
+        .author-input { 
+            border: none; 
+            outline: none; 
+            width: 100%; 
+            font-size: 17px; 
+            color: #888; 
+            margin-bottom: 20px; 
+            font-family: inherit; 
+        }
+        
+        #editor { 
+            font-size: 19px; 
+            min-height: 500px; 
+            border: none; 
+            padding: 0; 
+            line-height: 1.5; 
+        }
+        #editor img { 
+            max-width: 100%; 
+            height: auto; 
+            display: block; 
+            margin: 10px auto; 
+        }
+        #editor video {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+        }
+        #editor code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e83e8c;
+        }
+        #editor pre {
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        #editor pre code {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            color: #333 !important;
+            font-size: inherit;
+            word-break: normal;
+        }
+        #editor pre {
+            color: #333 !important;
+        }
+        #editor code {
+            color: #e83e8c !important;
+        }
+
+        #publish-btn { 
+            position: fixed; 
+            top: 15px; 
+            right: 15px; 
+            background: #fff; 
+            color: #1f7ec9; 
+            border: 1px solid #1f7ec9; 
+            padding: 5px 15px; 
+            border-radius: 15px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            z-index: 100;
+        }
+        #publish-btn:hover { 
+            background: #1f7ec9; 
+            color: #fff; 
+        }
+
+        /* Мобильные правки */
+        @media (max-width: 600px) {
+            .header-input { font-size: 26px; }
+            #editor { font-size: 17px; }
+            .container { padding: 15px; }
+            #publish-btn {
+                top: 10px;
+                right: 10px;
+                padding: 4px 12px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="publish-btn">Publish</button>
+    <div class="container">
+        <input type="text" id="title" class="header-input" placeholder="Title" value="{{ post.title if post else '' }}">
+        <input type="text" id="author" class="author-input" placeholder="Your Name" value="{{ post.author_name if post else '' }}">
+        <div id="editor">{% if post %}{{ post.content|safe }}{% endif %}</div>
+    </div>
+
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script>
+        // Нормализует блоки кода: преобразует ql-syntax в <pre><code>
+        // (detectLanguage будет определена позже, но мы используем её только если доступна)
+        function normalizeCodeBlocks(html) {
+            // Создаем временный контейнер для парсинга HTML
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            
+            // Находим все pre с классом ql-syntax
+            const preElements = temp.querySelectorAll('pre.ql-syntax');
+            preElements.forEach(pre => {
+                // Получаем текст из pre
+                const text = pre.textContent || pre.innerText;
+                
+                // Определяем язык из класса или содержимого
+                let language = 'text';
+                const langClass = Array.from(pre.classList).find(cls => cls.startsWith('language-'));
+                if (langClass) {
+                    language = langClass.replace('language-', '');
+                } else if (typeof detectLanguage === 'function') {
+                    // Пытаемся определить язык по содержимому (если функция доступна)
+                    const detected = detectLanguage(text);
+                    if (detected && detected !== 'text') {
+                        language = detected;
+                    }
+                }
+                
+                // Создаем новый pre с code внутри
+                const newPre = document.createElement('pre');
+                const code = document.createElement('code');
+                code.className = `language-${language}`;
+                code.textContent = text;
+                newPre.appendChild(code);
+                
+                // Заменяем старый pre на новый
+                pre.parentNode.replaceChild(newPre, pre);
+            });
+            
+            // Также обрабатываем pre без ql-syntax, но с содержимым кода
+            const allPre = temp.querySelectorAll('pre:not(.ql-syntax)');
+            allPre.forEach(pre => {
+                // Если внутри нет code, добавляем его
+                if (!pre.querySelector('code')) {
+                    const text = pre.textContent || pre.innerText;
+                    const code = document.createElement('code');
+                    code.textContent = text;
+                    pre.innerHTML = '';
+                    pre.appendChild(code);
+                }
+            });
+            
+            return temp.innerHTML;
+        }
+        
+        // Инициализация редактора
+        var quill = new Quill('#editor', {
+            theme: 'bubble',
+            placeholder: 'Your story...',
+            modules: {
+                toolbar: [['bold', 'italic', 'link', 'code', { 'header': 1 }, { 'header': 2 }, 'blockquote', 'image']]
+            },
+            formats: ['bold', 'italic', 'link', 'code', 'code-block', 'header', 'blockquote', 'image']
+        });
+        
+        // Добавляем поддержку code-block в контекстное меню bubble theme
+        // В bubble theme контекстное меню автоматически включает все форматы из formats,
+        // но нужно добавить кастомный обработчик для code-block
+        function addCodeBlockToContextMenu() {
+            const bubbleTooltip = quill.theme.tooltip;
+            if (!bubbleTooltip) return;
+            
+            // Проверяем, есть ли уже кнопка code-block
+            let codeBlockButton = bubbleTooltip.root.querySelector('.ql-code-block');
+            
+            if (!codeBlockButton) {
+                // Создаем кнопку для code-block
+                codeBlockButton = document.createElement('button');
+                codeBlockButton.setAttribute('type', 'button');
+                codeBlockButton.setAttribute('data-value', 'code-block');
+                codeBlockButton.className = 'ql-code-block';
+                codeBlockButton.innerHTML = '<svg viewBox="0 0 18 18"><rect class="ql-stroke" height="10" width="10" x="4" y="4"></rect><line class="ql-stroke" x1="8" x2="7" y1="2" y2="6"></line><line class="ql-stroke" x1="10" x2="11" y1="2" y2="6"></line></svg>';
+                codeBlockButton.title = 'Блок кода';
+                
+                // Добавляем обработчик
+                codeBlockButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const range = quill.getSelection(true);
+                    if (!range) return;
+                    
+                    // Получаем формат текущей строки
+                    const [line, offset] = quill.getLine(range.index);
+                    if (!line) return;
+                    
+                    const lineFormats = quill.getFormat(line);
+                    const isCodeBlock = lineFormats['code-block'] || false;
+                    
+                    if (isCodeBlock) {
+                        // Убираем форматирование блока кода
+                        quill.formatLine(range.index, 1, 'code-block', false);
+                    } else {
+                        // Добавляем форматирование блока кода
+                        // formatLine применяет формат ко всей строке
+                        quill.formatLine(range.index, 1, 'code-block', true);
+                    }
+                    bubbleTooltip.hide();
+                });
+                
+                // Добавляем кнопку в контекстное меню (после кнопки code)
+                const codeButton = bubbleTooltip.root.querySelector('.ql-code');
+                if (codeButton && codeButton.parentNode) {
+                    codeButton.parentNode.insertBefore(codeBlockButton, codeButton.nextSibling);
+                } else {
+                    bubbleTooltip.root.appendChild(codeBlockButton);
+                }
+            }
+        }
+        
+        // Добавляем кнопку при инициализации и при каждом показе контекстного меню
+        setTimeout(addCodeBlockToContextMenu, 100);
+        
+        // Перехватываем показ контекстного меню для добавления кнопки
+        setTimeout(function() {
+            if (quill.theme && quill.theme.tooltip && quill.theme.tooltip.show) {
+                const originalShow = quill.theme.tooltip.show;
+                quill.theme.tooltip.show = function() {
+                    originalShow.apply(this, arguments);
+                    addCodeBlockToContextMenu();
+                };
+            }
+        }, 150);
+        
+        // Нормализуем блоки кода при загрузке существующего поста
+        setTimeout(() => {
+            if (quill.root.innerHTML.trim()) {
+                const normalized = normalizeCodeBlocks(quill.root.innerHTML);
+                if (normalized !== quill.root.innerHTML) {
+                    quill.root.innerHTML = normalized;
+                }
+            }
+        }, 100);
+        
+        // Добавляем поддержку code через Ctrl+Shift+K - переключаем inline code
+        quill.keyboard.addBinding({
+            key: 'K',
+            shortKey: true,
+            shiftKey: true
+        }, function(range, context) {
+            if (!range) return false;
+            
+            const formats = quill.getFormat(range);
+            if (range.length > 0) {
+                // Есть выделенный текст - переключаем форматирование кода
+                if (formats.code) {
+                    quill.formatText(range.index, range.length, 'code', false);
+                } else {
+                    quill.formatText(range.index, range.length, 'code', true);
+                }
+            } else {
+                // Нет выделения - вставляем inline code с курсором внутри
+                quill.insertText(range.index, 'code', 'code');
+                quill.setSelection(range.index + 4);
+            }
+            return false;
+        });
+        
+        // Добавляем возможность выхода из блоков кода (Enter в конце блока или двойной Enter)
+        quill.keyboard.addBinding({
+            key: 'Enter'
+        }, function(range, context) {
+            if (!range) return true;
+            
+            // Проверяем, находимся ли мы внутри pre блока
+            const [line, offset] = quill.getLine(range.index);
+            if (!line) return true;
+            
+            const lineFormats = quill.getFormat(line);
+            const lineText = quill.getText(line);
+            const lineLength = lineText.length;
+            
+            // Проверяем, находимся ли мы в блоке кода
+            const isInCodeBlock = lineFormats['code-block'] || 
+                                 (line.domNode && (line.domNode.tagName === 'PRE' || line.domNode.classList.contains('ql-syntax')));
+            
+            if (isInCodeBlock) {
+                // Если предыдущая строка пустая - выходим из блока кода
+                if (range.index > 0) {
+                    const prevLine = quill.getLine(range.index - 1);
+                    if (prevLine && quill.getText(prevLine[0]).trim() === '') {
+                        // Выходим из блока кода
+                        const nextIndex = range.index;
+                        quill.insertText(nextIndex, '\n\n');
+                        quill.setSelection(nextIndex + 2);
+                        quill.formatText(nextIndex + 2, 1, 'code-block', false);
+                        return false;
+                    }
+                }
+                
+                // Если курсор в конце строки блока кода - разрешаем стандартное поведение (новая строка в блоке)
+                if (offset >= lineLength - 1) {
+                    return true; // Разрешаем стандартное поведение - новая строка в блоке кода
+                }
+            }
+            
+            return true; // Разрешаем стандартное поведение
+        });
+        
+        // Обработка вставки кода - вставляем как inline code (как в ChatGPT)
+        quill.clipboard.addMatcher(Node.TEXT_NODE, (node, delta) => {
+            const text = node.data;
+            if (!text || text.length < 5) return delta;
+            
+            // Проверяем, не находимся ли мы уже внутри code/pre блока
+            let parent = node.parentElement;
+            while (parent && parent !== document.body) {
+                if (parent.tagName === 'CODE' || parent.tagName === 'PRE') {
+                    return delta; // Уже внутри блока кода, не обрабатываем
+                }
+                parent = parent.parentElement;
+            }
+            
+            const lines = text.split('\n');
+            // Если текст многострочный (5+ строк) - это блок кода
+            if (lines.length >= 5) {
+                const language = detectLanguage(text);
+                if (language && language !== 'text') {
+                    // Многострочный код - вставляем как блок
+                    const pre = document.createElement('pre');
+                    const code = document.createElement('code');
+                    code.className = `language-${language}`;
+                    code.textContent = text;
+                    pre.appendChild(code);
+                    
+                    setTimeout(() => {
+                        const range = quill.getSelection(true);
+                        const index = range ? range.index : quill.getLength();
+                        const Delta = Quill.import('delta');
+                        const newDelta = new Delta();
+                        newDelta.retain(index);
+                        newDelta.delete(text.length);
+                        quill.updateContents(newDelta);
+                        quill.clipboard.dangerouslyPasteHTML(index, pre.outerHTML);
+                    }, 0);
+                    
+                    const Delta = Quill.import('delta');
+                    return new Delta();
+                }
+            } else if (lines.length >= 1 && (text.match(/[{}()\[\];=+\-*\/%<>!&|]/g) || []).length > 2) {
+                // Код с операторами - вставляем как inline code
+                const language = detectLanguage(text);
+                if (language && language !== 'text') {
+                    // Вставляем как inline code через HTML тег
+                    const code = document.createElement('code');
+                    code.textContent = text;
+                    code.className = 'inline-code-copyable';
+                    
+                    setTimeout(() => {
+                        const range = quill.getSelection(true);
+                        const index = range ? range.index : quill.getLength();
+                        const Delta = Quill.import('delta');
+                        const newDelta = new Delta();
+                        newDelta.retain(index);
+                        newDelta.delete(text.length);
+                        quill.updateContents(newDelta);
+                        quill.clipboard.dangerouslyPasteHTML(index, code.outerHTML);
+                    }, 0);
+                    
+                    const Delta = Quill.import('delta');
+                    return new Delta();
+                }
+            }
+            return delta;
+        });
+
+        // ФУНКЦИЯ ЗАГРУЗКИ ФОТО
+        function selectLocalImage() {
+            const input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/*,video/*');
+            input.click();
+            input.onchange = () => {
+                const file = input.files[0];
+                if (file) {
+                    saveToServer(file);
+                }
+            };
+        }
+
+        function saveToServer(file) {
+            const fd = new FormData();
+            fd.append('image', file);
+            
+            // Получаем текущую позицию курсора
+            const range = quill.getSelection(true);
+            const index = range ? range.index : quill.getLength();
+            
+            // Вставляем индикатор загрузки
+            quill.insertText(index, 'Загрузка...', 'user');
+            const loadingIndex = index;
+            
+            fetch('/upload', { 
+                method: 'POST', 
+                body: fd,
+                credentials: 'same-origin'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    try {
+                        // Удаляем "Загрузка..." безопасно
+                        const currentLength = quill.getLength();
+                        if (loadingIndex < currentLength) {
+                            const text = quill.getText(loadingIndex, Math.min(12, currentLength - loadingIndex));
+                            if (text.includes('Загрузка')) {
+                                quill.deleteText(loadingIndex, Math.min(12, currentLength - loadingIndex));
+                            }
+                        }
+                        
+                        if (data.error) {
+                            alert('Ошибка: ' + data.error);
+                            return;
+                        }
+                        
+                        // Вставляем контент
+                        const insertIndex = loadingIndex;
+                        if (data.type === 'video') {
+                            // Вставляем видео
+                            const videoHtml = `<video src="${data.url}" controls style="max-width: 100%; height: auto; display: block; margin: 20px auto;"></video>`;
+                            quill.clipboard.dangerouslyPasteHTML(insertIndex, videoHtml);
+                        } else {
+                            // Вставляем изображение
+                            quill.insertEmbed(insertIndex, 'image', data.url);
+                        }
+                    } catch (e) {
+                        console.error('Error inserting content:', e);
+                    }
+                })
+                .catch(error => {
+                    try {
+                        // Удаляем "Загрузка..." при ошибке
+                        const currentLength = quill.getLength();
+                        if (loadingIndex < currentLength) {
+                            const text = quill.getText(loadingIndex, Math.min(12, currentLength - loadingIndex));
+                            if (text.includes('Загрузка')) {
+                                quill.deleteText(loadingIndex, Math.min(12, currentLength - loadingIndex));
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error cleaning up:', e);
+                    }
+                    alert('Ошибка загрузки: ' + error.message);
+                });
+        }
+
+        // Перехватываем кнопку изображения в тулбаре
+        quill.getModule('toolbar').addHandler('image', () => {
+            selectLocalImage();
+        });
+        
+        // Обработка кнопки code в toolbar - переключаем inline code
+        quill.getModule('toolbar').addHandler('code', function() {
+            const range = quill.getSelection(true);
+            if (!range) return;
+            
+            if (range.length > 0) {
+                // Есть выделенный текст - проверяем, является ли он уже кодом
+                const [line, offset] = quill.getLine(range.index);
+                const formats = quill.getFormat(range);
+                
+                if (formats.code) {
+                    // Убираем форматирование кода
+                    quill.formatText(range.index, range.length, 'code', false);
+                } else {
+                    // Добавляем форматирование кода
+                    quill.formatText(range.index, range.length, 'code', true);
+                }
+            } else {
+                // Нет выделения - вставляем пустой inline code
+                const index = range.index;
+                quill.insertText(index, 'code', 'code');
+                quill.setSelection(index + 4);
+            }
+        });
+
+        // Функция определения языка программирования
+        function detectLanguage(text) {
+            const trimmed = text.trim();
+            if (!trimmed) return null;
+            
+            // Python
+            if (/^(def |class |import |from |if __name__|print\(|#!\/usr\/bin\/env python|#!\/usr\/bin\/python)/m.test(trimmed) ||
+                /(lambda |__init__|self\.|\.py$)/.test(trimmed)) {
+                return 'python';
+            }
+            
+            // JavaScript
+            if (/^(function |const |let |var |=>|console\.|document\.|window\.|require\(|module\.exports)/m.test(trimmed) ||
+                /(\.js$|\.jsx$|\.ts$|\.tsx$)/.test(trimmed)) {
+                return 'javascript';
+            }
+            
+            // HTML
+            if (/^<(!DOCTYPE|html|head|body|div|span|p|a|img|script|style|meta|link)/m.test(trimmed) ||
+                /<\/?[a-z][\s\S]*>/i.test(trimmed)) {
+                return 'html';
+            }
+            
+            // CSS
+            if (/^(@import|@media|@keyframes|@font-face|\.|#|\[|:root|body\s*\{)/m.test(trimmed) ||
+                /(:\s*[^;]+;|@media|@keyframes)/.test(trimmed)) {
+                return 'css';
+            }
+            
+            // PHP
+            if (/^<\?php|<\?=|echo |\$[a-zA-Z_]|function |class |namespace /m.test(trimmed)) {
+                return 'php';
+            }
+            
+            // JSON
+            if (/^[\s]*[\{\[]/.test(trimmed) && /[\}\]]/.test(trimmed) && 
+                /("[\w]+"\s*:|\{|\}|\[|\])/.test(trimmed)) {
+                try {
+                    JSON.parse(trimmed);
+                    return 'json';
+                } catch(e) {}
+            }
+            
+            // Bash/Shell
+            if (/^#!/.test(trimmed) && /(bin\/bash|bin\/sh|usr\/bin\/env bash|usr\/bin\/env sh)/.test(trimmed)) {
+                return 'bash';
+            }
+            if (/^(export |alias |sudo |apt-get |yum |brew )/m.test(trimmed) ||
+                /(\$\(|`|\.sh$)/.test(trimmed)) {
+                return 'bash';
+            }
+            
+            // SQL
+            if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|GRANT|REVOKE|BEGIN|COMMIT|ROLLBACK)/i.test(trimmed) ||
+                /(FROM |WHERE |JOIN |INNER JOIN |LEFT JOIN |GROUP BY |ORDER BY )/i.test(trimmed)) {
+                return 'sql';
+            }
+            
+            // Java
+            if (/^(public |private |protected |class |import |package |@Override|System\.out)/m.test(trimmed)) {
+                return 'java';
+            }
+            
+            // C/C++
+            if (/^(#include|#define|int main|void main|printf|cout|using namespace)/m.test(trimmed) ||
+                /(\.cpp$|\.c$|\.h$|\.hpp$)/.test(trimmed)) {
+                return 'cpp';
+            }
+            
+            // Go
+            if (/^(package |import |func |var |const |:= |go |chan |interface{})/m.test(trimmed)) {
+                return 'go';
+            }
+            
+            // Rust
+            if (/^(fn |let |mut |pub |use |impl |struct |enum |match |->)/m.test(trimmed)) {
+                return 'rust';
+            }
+            
+            // TypeScript
+            if (/^(interface |type |enum |export |import |: string|: number|: boolean)/m.test(trimmed)) {
+                return 'typescript';
+            }
+            
+            // Проверка на код по структуре (много символов, отступы, скобки)
+            const codeIndicators = {
+                brackets: (trimmed.match(/[{}()\[\]]/g) || []).length,
+                semicolons: (trimmed.match(/;/g) || []).length,
+                operators: (trimmed.match(/[=+\-*\/%<>!&|]/g) || []).length,
+                lines: trimmed.split('\n').length,
+                indented: trimmed.split('\n').filter(line => /^\s{2,}/.test(line)).length
+            };
+            
+            // Если много скобок, операторов и отступов - вероятно код
+            if (codeIndicators.brackets > 3 && codeIndicators.operators > 5 && 
+                codeIndicators.lines > 2 && codeIndicators.indented > 1) {
+                // Пытаемся определить по контексту
+                if (codeIndicators.semicolons > 2) {
+                    return 'javascript'; // По умолчанию JS
+                }
+                return 'text'; // Просто код без определения языка
+            }
+            
+            return null;
+        }
+        
+        // Отключаем автоматическое определение кода для текстовых узлов
+        // чтобы избежать рекурсии. Код будет определяться только при вставке
+        // готовых блоков кода из других источников
+        
+        // Флаг для предотвращения рекурсии
+        let isProcessingCode = false;
+        
+        // Обработка события paste для изображений и кода
+        quill.root.addEventListener('paste', function(e) {
+            const clipboardData = e.clipboardData || window.clipboardData;
+            
+            // Сначала проверяем, есть ли файлы (изображения) в буфере обмена
+            if (clipboardData && clipboardData.files && clipboardData.files.length > 0) {
+                const files = Array.from(clipboardData.files);
+                files.forEach(file => {
+                    if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        saveToServer(file);
+                    }
+                });
+                if (files.some(f => f.type.startsWith('image/') || f.type.startsWith('video/'))) {
+                    return false;
+                }
+            }
+            
+            // Если нет файлов, обрабатываем текст
+            const pastedText = clipboardData.getData('text/plain');
+            const pastedHTML = clipboardData.getData('text/html');
+            
+            if (!pastedText) return;
+            
+            // Проверяем, является ли это HTML кодом (начинается с <!DOCTYPE, <html, и т.д.)
+            const isHTMLCode = /^\s*<!DOCTYPE|^\s*<html|^\s*<head|^\s*<body|^\s*<script|^\s*<style/i.test(pastedText.trim());
+            
+            // Проверяем, похож ли текст на код (много HTML тегов, скобок и т.д.)
+            const hasCodeIndicators = /[{}()\[\];=+\-*\/%<>!&|]/.test(pastedText) && 
+                                    (pastedText.match(/[{}()\[\];=+\-*\/%<>!&|]/g) || []).length > 5;
+            
+            // Если это HTML код или код с множеством операторов
+            if (isHTMLCode || (hasCodeIndicators && pastedText.length > 20)) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const range = quill.getSelection(true);
+                const index = range ? range.index : quill.getLength();
+                
+                // Определяем язык
+                let language = 'html';
+                if (isHTMLCode) {
+                    language = 'html';
+                } else {
+                    const detected = detectLanguage(pastedText);
+                    if (detected && detected !== 'text') {
+                        language = detected;
+                    }
+                }
+                
+                // Если код многострочный (5+ строк) - вставляем как блок
+                const lines = pastedText.split('\n');
+                if (lines.length >= 5 || isHTMLCode) {
+                    const pre = document.createElement('pre');
+                    const code = document.createElement('code');
+                    code.className = `language-${language}`;
+                    code.textContent = pastedText;
+                    pre.appendChild(code);
+                    quill.clipboard.dangerouslyPasteHTML(index, pre.outerHTML);
+                } else {
+                    // Небольшой код - вставляем как inline code
+                    const code = document.createElement('code');
+                    code.textContent = pastedText;
+                    code.className = 'inline-code-copyable';
+                    quill.clipboard.dangerouslyPasteHTML(index, code.outerHTML);
+                }
+                
+                quill.setSelection(index + pastedText.length);
+                return false;
+            }
+        }, true); // Используем capture phase
+        
+        // Обработка drag and drop для изображений и видео
+        quill.root.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        
+        quill.root.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        quill.root.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const files = Array.from(e.dataTransfer.files);
+            files.forEach(file => {
+                if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+                    saveToServer(file);
+                }
+            });
+        });
+        
+        // Обработка вставки (Ctrl+V) для изображений и кода
+        quill.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+            // Предотвращаем рекурсию - если уже обрабатываем код, пропускаем
+            if (isProcessingCode) return delta;
+            
+            // Обрабатываем изображения (включая base64)
+            if (node.tagName === 'IMG') {
+                if (node.src.startsWith('data:')) {
+                    // Если это base64 изображение, загружаем его
+                    const file = dataURLtoFile(node.src, 'pasted-image.png');
+                    saveToServer(file);
+                    // Возвращаем пустую delta, чтобы не вставлять base64
+                    const Delta = Quill.import('delta');
+                    return new Delta();
+                } else {
+                    // Обычное изображение - пропускаем, пусть Quill обработает
+                    return delta;
+                }
+            }
+            
+            // Обрабатываем видео
+            if (node.tagName === 'VIDEO') {
+                // Пропускаем видео, пусть Quill обработает
+                return delta;
+            }
+            
+            // Если вставляется код из других редакторов (GitHub, StackOverflow и т.д.)
+            // Просто пропускаем - пусть Quill обработает сам, чтобы избежать рекурсии
+            if (node.tagName === 'PRE' || (node.tagName === 'CODE' && node.parentElement?.tagName === 'PRE')) {
+                // Возвращаем delta как есть - Quill сам обработает pre/code
+                return delta;
+            }
+            
+            // Если вставляется код из highlight.js или других подсветчиков
+            // Тоже пропускаем, чтобы избежать рекурсии
+            if (node.tagName === 'CODE' && node.className && typeof node.className === 'string' && node.className.includes('language-')) {
+                return delta;
+            }
+            
+            return delta;
+        });
+
+        function dataURLtoFile(dataurl, filename) {
+            const arr = dataurl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while(n--){
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new File([u8arr], filename, {type:mime});
+        }
+
+        // Автоматическое преобразование видео ссылок и кода при вставке
+        let isProcessingAutoFormat = false;
+        quill.on('text-change', function(delta, oldDelta, source) {
+            if (isProcessingAutoFormat || source !== 'user') return;
+            
+            const text = quill.getText();
+            const html = quill.root.innerHTML;
+            
+            // Проверяем наличие видео ссылок (YouTube, Vimeo)
+            const videoPattern = /(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|vimeo\.com\/|dailymotion\.com\/video\/)[^\s<>"{}|\\^`\[\]]+)/gi;
+            const matches = text.match(videoPattern);
+            
+            if (matches) {
+                matches.forEach(url => {
+                    // Проверяем, не обработана ли уже ссылка
+                    if (!html.includes('video-wrapper') || !html.includes(url)) {
+                        // Заменяем ссылку на embed
+                        const embedCode = convertVideoUrlToEmbed(url);
+                        if (embedCode) {
+                            isProcessingAutoFormat = true;
+                            const index = text.indexOf(url);
+                            quill.deleteText(index, url.length);
+                            quill.clipboard.dangerouslyPasteHTML(index, embedCode);
+                            setTimeout(() => { isProcessingAutoFormat = false; }, 100);
+                        }
+                    }
+                });
+            }
+            
+            // Автоматическое определение и оборачивание кода в inline code
+            // Ищем текст, который выглядит как код, но не обернут в теги code
+            const codePattern = /\b([a-zA-Z_$][a-zA-Z0-9_$]*\s*[=<>!+\-*/%&|]+\s*[a-zA-Z0-9_$()\[\]{}"']+|[{}()\[\];=+\-*\/%<>!&|]{3,}|def\s+\w+|function\s+\w+|const\s+\w+|let\s+\w+|var\s+\w+)/g;
+            const codeMatches = text.match(codePattern);
+            
+            if (codeMatches && !html.includes('<code')) {
+                codeMatches.forEach(match => {
+                    // Проверяем, не обернут ли уже в code
+                    const matchIndex = text.indexOf(match);
+                    if (matchIndex !== -1 && match.length > 3 && match.length < 50) {
+                        const language = detectLanguage(match);
+                        if (language && language !== 'text') {
+                            // Проверяем, что это действительно код, а не часть обычного текста
+                            const before = text[matchIndex - 1] || ' ';
+                            const after = text[matchIndex + match.length] || ' ';
+                            if (!/[a-zA-Z0-9]/.test(before) && !/[a-zA-Z0-9]/.test(after)) {
+                                // Оборачиваем в code тег
+                                isProcessingAutoFormat = true;
+                                const code = document.createElement('code');
+                                code.textContent = match;
+                                code.className = 'inline-code-copyable';
+                                quill.deleteText(matchIndex, match.length);
+                                quill.clipboard.dangerouslyPasteHTML(matchIndex, code.outerHTML);
+                                setTimeout(() => { isProcessingAutoFormat = false; }, 100);
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        function convertVideoUrlToEmbed(url) {
+            if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
+                let videoId = '';
+                if (url.includes('youtube.com/watch')) {
+                    videoId = url.split('v=')[1].split('&')[0];
+                } else if (url.includes('youtu.be/')) {
+                    videoId = url.split('youtu.be/')[1].split('?')[0];
+                }
+                if (videoId) {
+                    return `<div class="video-wrapper"><iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+                }
+            } else if (url.includes('vimeo.com')) {
+                const videoId = url.split('/').pop().split('?')[0];
+                return `<div class="video-wrapper"><iframe src="https://player.vimeo.com/video/${videoId}" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+            } else if (url.includes('dailymotion.com')) {
+                const videoId = url.includes('/video/') ? url.split('/video/')[1].split('?')[0] : url.split('/').pop();
+                return `<div class="video-wrapper"><iframe src="https://www.dailymotion.com/embed/video/${videoId}" frameborder="0" allowfullscreen></iframe></div>`;
+            }
+            return null;
+        }
+
+        // Логика кнопки Publish
+        document.getElementById('publish-btn').addEventListener('click', function() {
+            const data = {
+                title: document.getElementById('title').value,
+                author_name: document.getElementById('author').value,
+                content: normalizeCodeBlocks(quill.root.innerHTML)
+            };
+            const url = window.location.pathname.includes('/edit/') ? window.location.pathname : '/save';
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+                credentials: 'same-origin'
+            }).then(res => res.json()).then(data => {
+                window.location.href = '/' + data.slug;
+            }).catch(error => {
+                alert('Ошибка сохранения: ' + error.message);
+            });
+        });
+    </script>
+</body>
+</html>
+

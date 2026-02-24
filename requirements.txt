@@ -1,0 +1,10 @@
+flask
+flask-sqlalchemy
+werkzeug
+bleach
+python-slugify
+Pillow
+python-dotenv
+
+
+
